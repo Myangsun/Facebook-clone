@@ -7,8 +7,10 @@ import Widgets from "../components/Widgets";
 
 import { authOptions } from "../pages/api/auth/[...nextauth]";
 import { unstable_getServerSession } from "next-auth/next";
+import { collection, getDocs, orderBy, query } from "firebase/firestore";
+import { db } from "../firebase";
 
-export default function Home({ session }) {
+export default function Home({ session, posts }) {
   if (!session) return <Login />;
   return (
     <div className="h-screen bg-gray-100 overflow-hidden">
@@ -22,7 +24,7 @@ export default function Home({ session }) {
         {/* Sidebar */}
         <Sidebar />
         {/* Feed */}
-        <Feed />
+        <Feed posts={posts} />
         {/* Widgets */}
         <Widgets />
       </main>
@@ -37,9 +39,20 @@ export async function getServerSideProps(context) {
     authOptions
   );
 
+  const posts = await getDocs(
+    query(collection(db, "posts"), orderBy("timestamp", "desc"))
+  );
+
+  const docs = posts.docs.map((post) => ({
+    id: post.id,
+    ...post.data(),
+    timestamp: null,
+  }));
+
   return {
     props: {
       session,
+      posts: docs,
     },
   };
 }
